@@ -1,7 +1,18 @@
 ---
-title: "Untitled"
-author: "Dr Darren J Mayne"
-date: "30 April 2025"
+title: PUBH5125 Environmental and Social Epidemiology
+  <br>
+  <p style="color:#990000; font-size:44pt; font-weight:bolder;">Environmental Epidemiology Study Designs:<br>Disease Mapping Demonstration</p></br>
+  # <p style="font-size:38pt">&nbsp;</p>
+author: <p style="font-size:18pt; font-weight:normal">30 April 2025</p>
+  <p>Dr Darren Mayne</p>
+  <p style="font-size:18pt; font-weight:normal;">Public Health Epidemiologist<br>Illawarra Shoalhaven Local Health District<br>
+  <br>
+  Adjunct Senior Lecturer<br>Faculty of Medicine, School of Public Health</p></span>
+date: Full RStudio project code available from <a href="https://github.com/dmay8519/PUBH5125_DXMAP_DEMO" target="_blank" rel="noopener noreferrer">https://github.com/dmay8519/PUBH5125_DXMAP_DEMO</a>.<br>
+  Standalone R markdown (Rmd) code can be downloded using the <b>Code</b> button in the top right hand corner and selecting <b>Download Rmd</b>.
+  <p><a href="https://github.com/dmay8519/PUBH5125_DXMAP_2025" target="_blank" rel="noopener noreferrer">Environmental Epidemiology Study Designs --- Disease Mapping Demonstration</a> (PUBH5125_DXMAP_DEMO) by <a href="https://www.linkedin.com/in/themaynestory" 
+  target="_blank" rel="noopener noreferrer">Dr Darren Mayne</a> is licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/?ref=chooser-v1" target="_blank" rel="noopener noreferrer">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 
+  International</a> <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by-nc-sa.png" alt="BY NC SA" height="20px" hspace="1px"></p><br>
 output:
     html_document:
       # css: assets/rany_style.css
@@ -10,66 +21,190 @@ output:
       highlight: tango
       toc: yes
       toc_float:
-        collapsed: true
-      number_sections: true
+        collapsed: TRUE
+      number_sections: FALSE
       code_folding: hide
-      code_download: true
+      code_download: TRUE
 ---
 
-<style>
+<!-- Add inline style sheet -->
+
+<!-- ```{css, echo = FALSE} -->
+
+<style = text/css>
 
 .main-container {
   max-width: 100% !important;
   margin: auto;
 }
 
-body{
-  font-family: "Tw Cen MT";
-}
-
-<!-- p{ -->
-<!--   font-family: "Tw Cen MT"; -->
-<!-- } -->
-
-h1.title {
-    font-family: "Tw Cen MT";
-    font-size: 18pt;
-    font-weight: bolder;
-    color: #467d62;
+body {
+  font-family: "Public Sans Light";
 }
 
 h1 {
-    font-family: "Tw Cen MT";
+    font-family: "Public Sans Light";
     font-size: 18pt;
-    font-weight: bolder;
+    font-weight: bold;
     color: #467d62;
 }
 
-h2 {
-    font-family: "Tw Cen MT";
-    font-size: 16pt;
-    font-weight: bolder;
-    color: #FB5151;
-}
-
-h3 {
-    font-family: "Tw Cen MT";
-    font-size: 14pt;
-    font-weight: bolder;
-    color: #990000;
-}
-
-h4 {
-    font-family: "Tw Cen MT";
-    font-size: 14pt;
-    font-weight: bolder;
+h1.title {
+    font-family: "Public Sans Light";
+    font-size: 38pt;
+    font-weight: bold;
+    text-align:center;
     color: black;
 }
 
+h2 {
+    font-family: "Public Sans Light";
+    font-size: 28pt;
+    font-weight: bold;
+    color: #990000;
+}
+
+h3 {
+    font-family: "Public Sans Light";
+    font-size: 38pt;
+    font-weight: bold;
+    color: black;
+}
+
+h3 {
+    font-family: "Public Sans Light";
+    font-size: 18pt;
+    font-weight: bold;
+    color: #FB5151;
+}
+
+.author {
+    font-family: "Public Sans Light";
+    font-size: 28pt;
+    font-weight: bold;
+    text-align: center;
+    color: black;
+}
+
+.date {
+    font-family: "Public Sans Light";
+    font-size: 14pt;
+    font-weight: normal;
+    text-align: left;
+    color: black;
+}
+
+.code-folding-btn {
+  font-family: "Public Sans Light";
+    font-size: 10pt;
+  <!-- display: none; -->
+}
+
+<!-- See https://bookdown.org/yihui/rmarkdown-cookbook/html-scroll.html -->
+<!-- https://www.kaggle.com/discussions/questions-and-answers/393577 -->
+
+pre {
+  background-color: white;
+  <!-- Global maximum height for all chunks -->
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+pre[class] {
+  background-color: white;
+  <!-- Limit height of <PRE> blocks to 100px -->
+  max-height: 100px;
+}
+
+.textSource {
+  font-size: 10pt;
+  background-color: white;
+  <!-- Limits chunk codes to 100pc -->
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.textOutput {
+  font-size: 10pt;
+  background-color: white;
+  <!-- Limits chunk codes to 100pc -->
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.sourceCode { overflow: visible; }
+
 </style>
 
-```{r setup, include=FALSE}
+<!-- ``` -->
+
+## Setup and environment
+
+```{r options, include = FALSE, class.source=".textSource", class.output=".textOutput"}
+
 knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_chunk$append(attr.source = '.numberLines',
+                         attr.output = '.numberLines')
+
+base::options(width = 150)
+
+
+```
+
+### Required packages
+
+```{r required, class.output=".textOutput", class.output=".textOutput"}
+
+# knitr::opts_chunk$set(echo = TRUE)
+# 
+# knitr::opts_chunk$append(attr.source = '.numberLines',
+#                          attr.output = '.numberLines')
+# 
+# base::options(width = 150)
+
+
+# base::options(width = 175)
+
+{ # Check for and install pacman package if missing
+  
+  if(base::require(pacman, quietly = TRUE) == FALSE){install.packages("pacman")}
+  
+  # list required packages
+  
+  reqPackages <- c("tidyverse",      # An opinionated collection of R packages designed for data science
+                   "CARBayes",       # Spatial Generalised Linear Mixed Models for Areal Unit Data
+                   "coda",           # A package for Output Analysis and Diagnostics for MCMC
+                   "epitools",       # A package for epidemiological analysis
+                   "ggmcmc",         # MCMC diagnostics with ggplot
+                   "ggpubr",         # A package for producing publication-ready plots 
+                   "ggrepel",        # A package for position non-overlapping text labels with 'ggplot2'
+                   "GGally",         # A package to do pairplots
+                   "nimble",         # A package for performing MCMC in R
+                   "patchwork",      # A package to combine plots
+                   "RColorBrewer",   # A package of colour palettes
+                   "scales",         # Scale functions for visualization
+                   "sf",             # Simple features for R
+                   "spdep")          # A package to calculate neighbors)
+  
+  # Load (and install if missing) other required packages
+  
+  pacman::p_load(char = reqPackages, install = TRUE)
+  
+  # Check required packages are loaded
+  
+  pacman::p_loaded(char = reqPackages)
+}
+```
+
+### R environment
+
+```{r environ, class.source="textSource", class.output=".textOutput", out.height=50}
+
+# Get session information
+
+utils::sessionInfo()
+
 ```
 
 ## R Markdown
@@ -86,8 +221,8 @@ summary(cars)
 
 You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r pressure, echo = FALSE}
+# plot(pressure)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
