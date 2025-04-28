@@ -1,4 +1,4 @@
-# Study Design in Environmental Epidemiology: Disease Mapping (PUBH5125_DXMAP_2025)
+# <center>Study Design in Environmental Epidemiology: Disease Mapping<br>(PUBH5125_DXMAP_2025)</center>
 
 This repository contains all scripts, data and documention required to reproduce the PUBH5125 Environmental Epidemiology disease mapping tutorial presented by Dr Darren Mayne on ## @@@@@@ 2025.
 
