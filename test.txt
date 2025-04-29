@@ -1,0 +1,66 @@
+<table class=" lightable-classic" style="font-size: 14px; font-family: Public Sans Light; margin-left: auto; margin-right: auto;">
+ <thead>
+  <tr>
+   <th style="text-align:left;"> Variable </th>
+   <th style="text-align:left;"> Description </th>
+   <th style="text-align:left;"> Corrected Description </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;width: 4cm; "> CODENO </td>
+   <td style="text-align:left;width: 11cm; "> Code converted to numeric (drop w prefix) </td>
+   <td style="text-align:left;width: 11cm; "> Code converted to numeric (drop w prefix) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 4cm; "> AREA </td>
+   <td style="text-align:left;width: 11cm; "> District polygon area </td>
+   <td style="text-align:left;width: 11cm; "> District polygon area </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 4cm; "> PERIMETER </td>
+   <td style="text-align:left;width: 11cm; "> District polygon perimeter </td>
+   <td style="text-align:left;width: 11cm; "> District polygon perimeter </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 4cm; "> RECORD_ID </td>
+   <td style="text-align:left;width: 11cm; "> Unique ID </td>
+   <td style="text-align:left;width: 11cm; "> Unique ID </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 4cm; "> DISTRICT </td>
+   <td style="text-align:left;width: 11cm; "> District number 1-56 </td>
+   <td style="text-align:left;width: 11cm; "> District number 1-56 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 4cm; "> NAME </td>
+   <td style="text-align:left;width: 11cm; "> Name of districts from Cressie (1993) </td>
+   <td style="text-align:left;width: 11cm; "> Name of districts from Cressie (1993) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 4cm; "> CODE </td>
+   <td style="text-align:left;width: 11cm; "> District code from WinBugs </td>
+   <td style="text-align:left;width: 11cm; "> District code from WinBugs </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 4cm; "> CANCER </td>
+   <td style="text-align:left;width: 11cm; "> Lip cancer cases from Cressie (1993) </td>
+   <td style="text-align:left;width: 11cm; "> Lip cancer cases from Cressie (1993) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 4cm; "> POP </td>
+   <td style="text-align:left;width: 11cm; "> Population years at risk from Cressie (1993) </td>
+   <td style="text-align:left;width: 11cm; "> Population years at risk from Cressie (1993) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 4cm; "> CEXP </td>
+   <td style="text-align:left;width: 11cm; "> Expected cases from Lawson et al. (1999) </td>
+   <td style="text-align:left;width: 11cm; "> Expected cases from Stern &amp; Cressie (1999) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 4cm; "> AFF </td>
+   <td style="text-align:left;width: 11cm; "> Outdoor industry from Lawson et al. (1999) </td>
+   <td style="text-align:left;width: 11cm; "> Outdoor industry from Stern &amp; Cressie (1999) </td>
+  </tr>
+</tbody>
+</table>
