@@ -31,6 +31,7 @@ output:
 
 <!-- ```{css, echo = FALSE} -->
 
+```{=html}
 <style = text/css>
 
 .main-container {
@@ -40,6 +41,7 @@ output:
 
 body {
   font-family: "Public Sans Light";
+  font-size: 18pt;
 }
 
 h1 {
@@ -64,6 +66,8 @@ h2 {
     color: #990000;
 }
 
+/*
+
 h3 {
     font-family: "Public Sans Light";
     font-size: 38pt;
@@ -71,9 +75,11 @@ h3 {
     color: black;
 }
 
+*/
+
 h3 {
     font-family: "Public Sans Light";
-    font-size: 18pt;
+    font-size: 22pt;
     font-weight: bold;
     color: #FB5151;
 }
@@ -96,75 +102,201 @@ h3 {
 
 .code-folding-btn {
   font-family: "Public Sans Light";
-    font-size: 10pt;
+  font-size: 10pt;
   <!-- display: none; -->
 }
 
-<!-- See https://bookdown.org/yihui/rmarkdown-cookbook/html-scroll.html -->
-<!-- https://www.kaggle.com/discussions/questions-and-answers/393577 -->
+/* Set global maximum height for all chunks */
 
 pre {
   background-color: white;
-  <!-- Global maximum height for all chunks -->
-  max-height: 300px;
+  max-height: 100%;
   overflow-y: auto;
 }
+
+/* Limit height of <PRE> blocks to 100px */
 
 pre[class] {
   background-color: white;
-  <!-- Limit height of <PRE> blocks to 100px -->
-  max-height: 100px;
+  max-height: 100%;
 }
 
-.textSource {
-  font-size: 10pt;
-  background-color: white;
-  <!-- Limits chunk codes to 100pc -->
+/* Limits chunk codes to 100px */
+
+.scroll-100 {
   max-height: 100px;
   overflow-y: auto;
 }
 
-.textOutput {
+/* Style class selector for <pre></pre> tags - source/output containers */ 
+
+.textPre {
+  font-family: mono;
   font-size: 10pt;
   background-color: white;
-  <!-- Limits chunk codes to 100pc -->
-  max-height: 100px;
-  overflow-y: auto;
 }
 
-.sourceCode { overflow: visible; }
+/* Hack required to get Pandoc to render line numbers */ 
+
+.sourceCode {
+  overflow: visible;
+}
+
+/* Adjust TOC width and font size */
+
+div.tocify {
+  font-size: 12pt;
+  max-width: 100%;
+}
+
+/* Implement hanging paragraph indentation in reference list*/
+
+.nlm-reference {
+  padding-left: 30px;
+  text-indent: -30px;
+}
 
 </style>
+```
 
 <!-- ``` -->
 
-## Setup and environment
+## Background
 
-```{r options, include = FALSE, class.source=".textSource", class.output=".textOutput"}
+<div style="line-height:1.7;">
+* This session will demonstrate fitting the Besag, York, and Mollié (1991) conditional autoregressive (CAR) model for disease mapping and ecological regression applications involving areal data.
+
+* We will use a classic data set first reported by Clayton and Kaldor (1987) that describes the incidence of male lip cancer within Scottish administration districts from 1975 to 1980.
+
+* The data set was subsequently expanded to include the number of male population-years at-risk (Cressie, 1993) and the expected number of lip cancer cases and percentage of males employed in agriculture, fishing and forestry (AFF) (Stern & Cressie, 1999) in each district.
+
+* The map of Scottish administrative districts is a post-processed version of the Scotland.map S-Plus boundary file that was included in WinBUGS 1.4.3, a state-of-the-art 32-bit program for Bayesian inference using Gibbs Sampling when released on 6^th^ August 2007 --- not so much now
+
+* All these data are available in a single ZIP archive available from the [GeoDa Centre GuitHub repository](https://geodacenter.github.io/data-and-lab/data/scotlip.zip). A tabulated description of these data with corrected references --- Lawson et al. (1999) were the editors of the book, Stern & Cressie (1999) were the authors of the chapter in which the data appear.
+</div>
+
+Table 1: Data summary for Scottish lip cancer data set available from GeoDa Centre GitHub repository
+
+<table class=" lightable-classic" style="width=100%; font-size: 16pt; font-family: Public Sans Light; margin-left: auto; margin-right: auto;">
+ <thead style="border-top:1px solid black; border-bottom:1px solid black; padding:3px;">
+  <tr>
+   <th style="text-align:left;"> Variable </th>
+   <th style="text-align:left;"> Description </th>
+   <th style="text-align:left;"> Renamed variable </th>
+   <th style="text-align:left;"> Corrected description </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;width: 16%; "> CODENO </td>
+   <td style="text-align:left;width: 35%; "> Code converted to numeric (drop w prefix) </td>
+   <td style="text-align:left;width: 16%; "> CODENO </td>
+   <td style="text-align:left;width: 35%; "> Code converted to numeric (drop w prefix) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 16%; "> AREA </td>
+   <td style="text-align:left;width: 35%; "> District polygon area </td>
+   <td style="text-align:left;width: 16%; "> AREA </td>
+   <td style="text-align:left;width: 35%; "> District polygon area </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 16%; "> PERIMETER </td>
+   <td style="text-align:left;width: 35%; "> District polygon perimeter </td>
+   <td style="text-align:left;width: 16%; "> PERIMETER </td>
+   <td style="text-align:left;width: 35%; "> District polygon perimeter </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 16%; "> RECORD_ID </td>
+   <td style="text-align:left;width: 35%; "> Unique ID </td>
+   <td style="text-align:left;width: 16%; "> RECORD_ID </td>
+   <td style="text-align:left;width: 35%; "> Unique ID </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 16%; "> DISTRICT </td>
+   <td style="text-align:left;width: 35%; "> District number 1-56 </td>
+   <td style="text-align:left;width: 16%; "> DISTRICT </td>
+   <td style="text-align:left;width: 35%; "> District number 1-56 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 16%; "> NAME </td>
+   <td style="text-align:left;width: 35%; "> Name of districts from Cressie (1993) </td>
+   <td style="text-align:left;width: 16%; "> NAME </td>
+   <td style="text-align:left;width: 35%; "> Name of districts from Cressie (1993) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 16%; "> CODE </td>
+   <td style="text-align:left;width: 35%; "> District code from WinBugs </td>
+   <td style="text-align:left;width: 16%; "> CODE </td>
+   <td style="text-align:left;width: 35%; "> District code from WinBugs </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 16%; "> CANCER </td>
+   <td style="text-align:left;width: 35%; "> Lip cancer cases from Cressie (1993) </td>
+   <td style="text-align:left;width: 16%; "> CANCER </td>
+   <td style="text-align:left;width: 35%; "> Lip cancer cases from Cressie (1993) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 16%; "> POP </td>
+   <td style="text-align:left;width: 35%; "> Population years at risk from Cressie (1993) </td>
+   <td style="text-align:left;width: 16%; "> POP </td>
+   <td style="text-align:left;width: 35%; "> Population years at risk from Cressie (1993) </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;width: 16%; "> CEXP </td>
+   <td style="text-align:left;width: 35%; "> Expected cases from Lawson et al. (1999) </td>
+   <td style="text-align:left;width: 16%; "> CEXP </td>
+   <td style="text-align:left;width: 35%; "> Expected cases from Stern &amp; Cressie (1999) </td>
+  </tr>
+  <tr style="border-bottom:1px solid black;">
+   <td style="text-align:left;width: 16%; "> AFF </td>
+   <td style="text-align:left;width: 35%; "> Outdoor industry from Lawson et al. (1999) </td>
+   <td style="text-align:left;width: 16%; "> AFF </td>
+   <td style="text-align:left;width: 35%; "> Outdoor industry from Stern &amp; Cressie (1999) </td>
+  </tr>
+</tbody>
+</table>
+
+## Aims of this session
+
+<div style="line-height:2.2;">
+1.  Download spatial boundaries and observed and expected cases of incident male lip cancer in Scottish districts from 1975–1980\
+2.  Calculate and map the standardised incidence ratios (SIR) and their precision from the raw data\
+3.  Create a queen adjacency matrix that identifies the neighbours for each Scottish district sharing a common boundary (edge) or point (vertex)\
+4.  Fit a Besag, York and Mollié (BYM) conditional autoregressive (CAR) model to produce a smoothed disease map of lip cancer risk in Scotland over the study period\
+    4.1 Calculate and map residual risk estimated by $e^{s_i + u_i}$\
+    4.2 Decompose and map residual risk due to spatially structured $(e^{s_i})$ and unstructured $(e^{u_i})$ effects\
+    4.3 Estimate proportion of residual risk in male lip cancer incidence due to spatial effects $\rho = \sigma^{2}_{s} / (\sigma^{2}_{s} + \sigma^{2}_{u})$\
+    4.4 Calculate posterior probability for increased residual risk of male lip cancer incidence for each district
+5.  Fit a BYM ecological CAR model to obtain an effect estimate for the association between lip cancer incidence and the percentage of male population engaged in agriculture, fishing and forestry (AFF)\
+    5.1 Calculate effect estimate and 95% credible interval (CrI) for AFF exposure covariate\
+    5.1 Calculate and map residual risk estimated by $e^{s_i + u_i}$\
+    5.2 Decompose and map residual risk due to spatially structured and unstructured effects\
+    5.3 Evaluate change in $(\rho)$ after adjusting for the percentage of male population in AFF\
+    5.4 Calculate (posterior) probability of increased lip cancer risk for each district after adjusting for AFF\
+6.  Compare changes in residual variance due to spatially structured and unstructured factors from 4 to 5
+</div>
+
+## Preliminaries
+
+```{r options, include = FALSE}
 
 knitr::opts_chunk$set(echo = TRUE)
 
 knitr::opts_chunk$append(attr.source = '.numberLines',
+                         class.source = ".textPre",
+                         class.output = ".textPre",
                          attr.output = '.numberLines')
 
-base::options(width = 150)
+base::options(width = 170)
 
 
 ```
 
 ### Required packages
 
-```{r required, class.output=".textOutput", class.output=".textOutput"}
+These are the packages that need to be installed and attached to complete the analysis.
 
-# knitr::opts_chunk$set(echo = TRUE)
-# 
-# knitr::opts_chunk$append(attr.source = '.numberLines',
-#                          attr.output = '.numberLines')
-# 
-# base::options(width = 150)
-
-
-# base::options(width = 175)
+```{r required}
 
 { # Check for and install pacman package if missing
   
@@ -180,8 +312,10 @@ base::options(width = 150)
                    "ggpubr",         # A package for producing publication-ready plots 
                    "ggrepel",        # A package for position non-overlapping text labels with 'ggplot2'
                    "GGally",         # A package to do pairplots
+                   "knitr",          # A general-purpose tool for dynamic report generation in R
                    "nimble",         # A package for performing MCMC in R
                    "patchwork",      # A package to combine plots
+                   "rmarkdown",      # A package for creating dynamic documents for R
                    "RColorBrewer",   # A package of colour palettes
                    "scales",         # Scale functions for visualization
                    "sf",             # Simple features for R
@@ -194,12 +328,16 @@ base::options(width = 150)
   # Check required packages are loaded
   
   pacman::p_loaded(char = reqPackages)
+  
 }
+
 ```
 
 ### R environment
 
-```{r environ, class.source="textSource", class.output=".textOutput", out.height=50}
+This output shows the `R` environment of the analysis; it includes dependencies loaded / attached by packages above.
+
+```{r environ, class.output=".textPre .scroll-100"}
 
 # Get session information
 
@@ -207,7 +345,7 @@ utils::sessionInfo()
 
 ```
 
-## R Markdown
+## Data
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
@@ -217,12 +355,22 @@ When you click the **Knit** button a document will be generated that includes bo
 summary(cars)
 ```
 
-## Including Plots
+## References
 
-You can also embed plots, for example:
+<p class="nlm-reference">
 
-```{r pressure, echo = FALSE}
-# plot(pressure)
-```
+Clayton D, Kaldor J. Empirical Bayes estimates of age standardised relative risks for use in disease mapping. Biometrics 1987;43:671--681. doi: [10.2307/2532003](https://doi.org/10.2307/2532003)
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+</p>
+
+<p class="nlm-reference">
+
+Cressie NAC. Statistics for spatial data. New York: John Wiley & Sons; 1993. p. 537 (Table 7.2). doi: [10.1002/9781119115151](https://doi.org/10.1002/9781119115151)
+
+</p>
+
+<p class="nlm-reference">
+
+Stern H, Cressie N. Inferences for extremes in disease mapping. In Lawson AB, Biggeri A, Böhning D, et al., editors. Disease mapping and risk assessment for public health. New York: Wiley; 1999. pp. 68--69 (Table 5.1). Available at Storage General ([614.42 41](https://sydney.primo.exlibrisgroup.com/permalink/61USYD_INST/1c0ug48/alma991006490639705106))
+
+</p>
