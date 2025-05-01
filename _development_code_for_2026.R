@@ -66,11 +66,11 @@ abs_sa2 <- c("2021_GCP_SA2_for_NSW_short-header" = "https://www.abs.gov.au/censu
 
 for (i in 1:base::length(abs_sa2)){
   
-  # utils::download.file(abs_sa2[i],
-  #                      destfile = base::file.path(base::tempdir(),
-  #                                                 base::paste0(base::names(abs_sa2[i]), ".zip"),
-  #                                                 fsep = "\\"),
-  #                      mode = "wb")
+  utils::download.file(abs_sa2[i],
+                       destfile = base::file.path(base::tempdir(),
+                                                  base::paste0(base::names(abs_sa2[i]), ".zip"),
+                                                  fsep = "\\"),
+                       mode = "wb")
   
   utils::unzip(zipfile = base::file.path(base::tempdir(),
                                base::paste0(base::names(abs_sa2[i]), ".zip"),
@@ -79,10 +79,6 @@ for (i in 1:base::length(abs_sa2)){
                junkpaths = TRUE)
   
 }
-
-c(,
-  "2021Census_G19B_NSW_SA2.csv",
-  "2021Census_G19C_NSW_SA2.csv"),
 
 sa2_g19 <- utils::read.csv(file = base::paste(base::tempdir(),
                                               "2021Census_G19A_NSW_SA2.csv",
@@ -102,7 +98,12 @@ sa2_g19 <- utils::read.csv(file = base::paste(base::tempdir(),
   
   tidyr::pivot_longer(cols = -c(sa2_code_2021),
                       names_to = "column",
-                      values_to = "count")
+                      values_to = "count") %>%
+  
+  dplyr::mutate(sex = base::factor(base::regmatches(column, base::regexpr("^[a-zA-z]", column)),
+                                   levels = c("m", "f", "p"),
+                                   labels = c("Males", "Females", "Persons")),
+                age = base::regmatches(column, base::regexpr("([0-9]|(tot)){1, }.*$", column)))
 
 
 utils::browseURL(base::tempdir())
