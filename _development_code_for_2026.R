@@ -103,9 +103,12 @@ sa2_g19 <- utils::read.csv(file = base::paste(base::tempdir(),
   dplyr::mutate(sex = base::factor(base::regmatches(column, base::regexpr("^[a-zA-z]", column)),
                                    levels = c("m", "f", "p"),
                                    labels = c("Males", "Females", "Persons")),
-                age = base::regmatches(column, base::regexpr("([0-9]|(tot)){1, }.*$", column)))
+                age = base::regmatches(column, base::regexpr("([0-9]|(tot)){1, }.*$", column)),
+                other = base::regmatches(column, base::regexpr("^[^a-zA-z]", column)))
 
 
 utils::browseURL(base::tempdir())
 
+column <- sa2_g19$column
 
+base::regmatches(column, base::regexpr("[^a-zA-z].*", column))
