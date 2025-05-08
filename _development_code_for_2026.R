@@ -106,9 +106,25 @@ sa2_g19 <- utils::read.csv(file = base::paste(base::tempdir(),
                 age = base::regmatches(column, base::regexpr("([0-9]|(tot)){1, }.*$", column)),
                 other = base::regmatches(column, base::regexpr("^[^a-zA-z]", column)))
 
-
 utils::browseURL(base::tempdir())
 
-column <- sa2_g19$column
+sa2_geo <- sf::st_read(base::file.path(base::tempdir(),
+                                       "SA2_2021_AUST_GDA2020.shp",
+                                       fsep = "\\")) %>%
+  stats::setNames(stringi::stri_replace_all_regex(base::tolower(base::names(.)),
+                                                  pattern = c("code21",
+                                                              "name21",
+                                                              "flag21",
+                                                              "lbl21",
+                                                              "sqkm21",
+                                                              "uri21"),
+                                                  replacement = c("2021_code",
+                                                                  "2021_name",
+                                                                  "2021_flag",
+                                                                  "2021_desc",
+                                                                  "_2021_sqkm",
+                                                                  "2021_link"),
+                                                  vectorize=FALSE)) %>%
+  dplyr::filter(gcc_2021_code == "1GSYD")
 
-base::regmatches(column, base::regexpr("[^a-zA-z].*", column))
+plot(sf::st_geometry(sa2_geo))
