@@ -66,11 +66,11 @@ abs_sa2 <- c("2021_GCP_SA2_for_NSW_short-header" = "https://www.abs.gov.au/censu
 
 for (i in 1:base::length(abs_sa2)){
   
-  # utils::download.file(abs_sa2[i],
-  #                      destfile = base::file.path(base::tempdir(),
-  #                                                 base::paste0(base::names(abs_sa2[i]), ".zip"),
-  #                                                 fsep = "\\"),
-  #                      mode = "wb")
+  utils::download.file(abs_sa2[i],
+                       destfile = base::file.path(base::tempdir(),
+                                                  base::paste0(base::names(abs_sa2[i]), ".zip"),
+                                                  fsep = "\\"),
+                       mode = "wb")
   
   utils::unzip(zipfile = base::file.path(base::tempdir(),
                                base::paste0(base::names(abs_sa2[i]), ".zip"),
@@ -79,10 +79,6 @@ for (i in 1:base::length(abs_sa2)){
                junkpaths = TRUE)
   
 }
-
-c(,
-  "2021Census_G19B_NSW_SA2.csv",
-  "2021Census_G19C_NSW_SA2.csv"),
 
 sa2_g19 <- utils::read.csv(file = base::paste(base::tempdir(),
                                               "2021Census_G19A_NSW_SA2.csv",
@@ -107,4 +103,25 @@ sa2_g19 <- utils::read.csv(file = base::paste(base::tempdir(),
 
 utils::browseURL(base::tempdir())
 
+sa2_geo <- sf::st_read(base::file.path(base::tempdir(),
+                                       "SA2_2021_AUST_GDA2020.shp",
+                                       fsep = "\\"))
 
+foo <- sa2_geo %>%
+  stats::setNames(base::gsub("code21", "2021_code",
+                             base::gsub("name21", "2021_name",
+                                        base::tolower(base::names(.)))))
+
+
+foo <- sa2_geo %>%
+  stats::setNames(stringi::stri_replace_all_regex(base::tolower(base::names(.)),
+                                                  pattern=c("code21", "name21", "flag21", "lbl21", "sqkm21"),
+                                                  replacement=c("2021_code", "2021_name", "2021_flag", "2021_desc", "_2021_sqkm"),
+                                                  vectorize=FALSE)) %>%
+  dplyr::filter(gcc_2021_code == "1GSYD")
+                    
+                    ("(code21)(2021_code)",
+                             "name21", "2021_name",
+                                        base::tolower(base::names(.)))))
+
+  
