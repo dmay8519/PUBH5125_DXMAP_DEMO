@@ -98,30 +98,17 @@ sa2_g19 <- utils::read.csv(file = base::paste(base::tempdir(),
   
   tidyr::pivot_longer(cols = -c(sa2_code_2021),
                       names_to = "column",
-                      values_to = "count")
+                      values_to = "count") %>%
+  
+  dplyr::mutate(sex = base::factor(base::regmatches(column, base::regexpr("^[a-zA-z]", column)),
+                                   levels = c("m", "f", "p"),
+                                   labels = c("Males", "Females", "Persons")),
+                age = base::regmatches(column, base::regexpr("([0-9]|(tot)){1, }.*$", column)),
+                other = base::regmatches(column, base::regexpr("^[^a-zA-z]", column)))
 
 
 utils::browseURL(base::tempdir())
 
-sa2_geo <- sf::st_read(base::file.path(base::tempdir(),
-                                       "SA2_2021_AUST_GDA2020.shp",
-                                       fsep = "\\"))
+column <- sa2_g19$column
 
-foo <- sa2_geo %>%
-  stats::setNames(base::gsub("code21", "2021_code",
-                             base::gsub("name21", "2021_name",
-                                        base::tolower(base::names(.)))))
-
-
-foo <- sa2_geo %>%
-  stats::setNames(stringi::stri_replace_all_regex(base::tolower(base::names(.)),
-                                                  pattern=c("code21", "name21", "flag21", "lbl21", "sqkm21"),
-                                                  replacement=c("2021_code", "2021_name", "2021_flag", "2021_desc", "_2021_sqkm"),
-                                                  vectorize=FALSE)) %>%
-  dplyr::filter(gcc_2021_code == "1GSYD")
-                    
-                    ("(code21)(2021_code)",
-                             "name21", "2021_name",
-                                        base::tolower(base::names(.)))))
-
-  
+base::regmatches(column, base::regexpr("[^a-zA-z].*", column))

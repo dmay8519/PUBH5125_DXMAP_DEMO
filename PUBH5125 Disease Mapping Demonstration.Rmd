@@ -267,13 +267,13 @@ Table 1: Data summary for Scottish lip cancer data set available from GeoDa Cent
     4.2 Decompose and map residual risk due to spatially structured $(e^{s_i})$ and unstructured $(e^{u_i})$ effects\
     4.3 Estimate proportion of residual risk in male lip cancer incidence due to spatial effects $\rho = \sigma^{2}_{s} / (\sigma^{2}_{s} + \sigma^{2}_{u})$\
     4.4 Calculate posterior probability for increased residual risk of male lip cancer incidence for each district
-5.  Fit a BYM ecological CAR model to obtain an effect estimate for the association between lip cancer incidence and the percentage of male population engaged in agriculture, fishing and forestry (AFF)\
-    5.1 Calculate effect estimate and 95% credible interval (CrI) for AFF exposure covariate\
-    5.1 Calculate and map residual risk estimated by $e^{s_i + u_i}$\
-    5.2 Decompose and map residual risk due to spatially structured and unstructured effects\
-    5.3 Evaluate change in $(\rho)$ after adjusting for the percentage of male population in AFF\
-    5.4 Calculate (posterior) probability of increased lip cancer risk for each district after adjusting for AFF\
-6.  Compare changes in residual variance due to spatially structured and unstructured factors from 4 to 5
+<!-- 5.  Fit a BYM ecological CAR model to obtain an effect estimate for the association between lip cancer incidence and the percentage of male population engaged in agriculture, fishing and forestry (AFF)\ -->
+<!--     5.1 Calculate effect estimate and 95% credible interval (CrI) for AFF exposure covariate\ -->
+<!--     5.1 Calculate and map residual risk estimated by $e^{s_i + u_i}$\ -->
+<!--     5.2 Decompose and map residual risk due to spatially structured and unstructured effects\ -->
+<!--     5.3 Evaluate change in $(\rho)$ after adjusting for the percentage of male population in AFF\ -->
+<!--     5.4 Calculate (posterior) probability of increased lip cancer risk for each district after adjusting for AFF\ -->
+<!-- 6.  Compare changes in residual variance due to spatially structured and unstructured factors from 4 to 5 -->
 </div>
 
 ## Preliminaries
@@ -289,6 +289,21 @@ knitr::opts_chunk$append(attr.source = '.numberLines',
 
 base::options(width = 170)
 
+# Convience function for converting between pixels and inches
+
+px2in <- function(value = NA, metric = "in"){
+  
+  # value   numeric value to convert
+  # metric  character value c("px", "in") indicate unit type of value
+
+  base::return(base::ifelse(metric == "px", value / 96, value * 96))
+  
+  # Examples
+  
+  # Pixels to inches: px2in(1440, "px")
+  # Inches to pixels: px2in(  15, "in")
+  
+}
 
 ```
 
@@ -438,7 +453,7 @@ print(src_sf)
 
 ### Enrich data
 
-In this final preparation step, we wrangle the remaining attribute data into an intuitive analysis-ready format and enrich it by adding standardised incidence ratios and their exact Poisson 95% confidence intervals. We will also calculate indicies of estimate precision based on expected and observed lip cancer cases.
+In this final preparation step, we wrangle the remaining attribute data (e.g. some district names need tidying up) into an intuitive analysis-ready format and enrich it by adding standardised incidence ratios and their exact Poisson 95% confidence intervals. We will also calculate indicies of estimate precision based on expected and observed lip cancer cases.
 
 ```{r enrich-data}
 
@@ -455,7 +470,6 @@ lip_sf <- src_sf %>%
   dplyr::select(dist_code = district, dist_name = name, dist_popn = pop, obs_ca = cancer, exp_ca = cexp, pct_aff = aff) %>%
   
   # Correct typographical errors in district names
-
   
   dplyr::mutate(dplyr::across(dist_name, ~ dplyr::case_when(. == "EastKilbride" ~ "East Kilbride",
                                                             . == "EastLothian" ~ "East Lothian",
@@ -472,17 +486,26 @@ lip_sf <- src_sf %>%
                                                     obs_sir_l95 = lower,
                                                     obs_sir_u95  = upper))) %>%
   
+  # Calculate probability values for SIR
+  
+  dplyr::mutate(obs_sir_sig = stats::dpois(obs_ca, exp_ca),
+                obs_sir_cat = dplyr::case_when(obs_sir_est < 1 & obs_sir_sig < 0.005 ~ "--",
+                                               obs_sir_est < 1 & obs_sir_sig < 0.025 ~ "-",
+                                               obs_sir_est > 1 & obs_sir_sig < 0.005 ~ "++",
+                                               obs_sir_est > 1 & obs_sir_sig < 0.025 ~ "+",
+                                               .default = "")) %>%
+  
   # Calculate standard and relative errors for SIR
   
   dplyr::mutate(obs_sir_se = base::sqrt(obs_ca) / exp_ca,
                 obs_sir_rse = obs_sir_se / obs_sir_est,   # Also estimated by RSE = 1 / base::sqrt(obs_ca),
                 exp_sir_rse = 1 / exp_ca) %>%
   
-  # Add district centroids (note use of sf::st_geometry - avoids warnings about assumed attribute distributions
-
-  dplyr::bind_cols(sf::st_coordinates(sf::st_centroid(sf::st_geometry(.))) %>%
-                     base::as.data.frame() %>%
-                     dplyr::rename(centroid_x = X, centroid_y = Y)) %>%
+  # # Add district centroids (note use of sf::st_geometry - avoids warnings about assumed attribute distributions
+  # 
+  # dplyr::bind_cols(sf::st_coordinates(sf::st_centroid(sf::st_geometry(.))) %>%
+  #                    base::as.data.frame() %>%
+  #                    dplyr::rename(centroid_x = X, centroid_y = Y)) %>%
   
   # Add variable labels
   
@@ -495,50 +518,1115 @@ lip_sf <- src_sf %>%
                                 obs_sir_est = "Observed SIR estimate",
                                 obs_sir_l95 = "Observed SIR lower 95% CI",
                                 obs_sir_u95 = "Observed SIR upper 95% CI",
+                                obs_sir_sig = "Probability value for observed SIR estimate",
+                                obs_sir_cat = "Probability category for observed SIR estimate",
                                 obs_sir_se = "Observed SIR standard error",
                                 obs_sir_rse = "Observed SIR relative standard error",
                                 exp_sir_rse = "Proportional precision of SIR from expected cases",
-                                centroid_x = "Centroid X coordinate (EPSG:27700)",
-                                centroid_y = "Centroid Y coordinate (EPSG:27700)",
+                                # centroid_x = "Centroid X coordinate (EPSG:27700)",
+                                # centroid_y = "Centroid Y coordinate (EPSG:27700)",
                                 geom = "Geometry (OSGB 1936 / British National Grid)") %>%
   
   # Move geometry column to end of data set
   
   dplyr::select(dplyr::everything(), -geom, geom)
 
-# View data set header
+# View the data set
 
-print(lip_sf %>% dplyr::select(-c(centroid_x, centroid_y, geom)), n = 100)
-
-print(sf::st_drop_geometry(lip_sf), n = 100)
+print(lip_sf, digits = 2, n = 56)
 
 ```
 
+## Analysis
 
-Having read the GeoPackage into `R` and fixed the coordinate reference system, we can take our first look at the spatial data
+Just before we jump into the analysis, I will create three additional resources:
 
-```{r moredata}
+1. A Scotland boundary layer for annotating our maps
 
+```{r sct-boundary}
 
-
-## Use gpk_sf layer to create a Scotland boundary layer ----------------------
+# Dissolve (union) over the district geometries in the lip_sf sf object to obtain  
+# an outline (country) boundary for Scotland
 
 sct_sf <- lip_sf %>%
-  dplyr::mutate(area = "Scotland") %>%
+  dplyr::mutate(country = "Scotland") %>%
   dplyr::summarise(geom = sf::st_union(geom),
-                  .by = area)
+                  .by = country)
 
 
+base::print(sct_sf)
 
+```
+2. A list of districts labels to exclude from maps to reduce visual noise
 
+```{r dist-excluded}
 
-sf::st_union(src_sf, by_feature = FALSE) %>%
-  sf::st_as_sf() %>%
-  dplyr::mutate(area = "Scotland") %>%
-  dplyr::select(area, geom = x)
+# Create a vector of district names to exclude when labeling maps
+
+exc_labels <- c("Eastwood",
+                "Kilmarnock",
+                "Monklands",
+                "Motherwell",
+                "Renfrew",
+                "East Kilbride",
+                "Cumbernauld",
+                "Kirkcaldy",
+                "West Lothian",
+                "Inverclyde",
+                "Strathkelvin",
+                "Bearsden",
+                "East Lothian",
+                "Midlothian")
 
 ```
 
+3. A colour ramp with low, medium and high values to annotate ggplot2 scale elements
+
+```{r colour-ramp, fig.height=1, fig.width=px2in(1440, "px")}
+
+# Visualization colour palette
+
+col_pal <- c("low" = RColorBrewer::brewer.pal(11, "RdYlBu")[11],
+             "mid" = RColorBrewer::brewer.pal(11, "RdYlBu")[6],
+             "high" = RColorBrewer::brewer.pal(11, "RdYlBu")[1])
+
+# Create a colour ramp based on colour palette
+
+rampColours <- grDevices::colorRampPalette(col_pal)
+
+# Visualise the colour palette
+
+graphics::par(mar = c(0, 0, 0, 0))
+
+graphics::image(base::seq(1, 1000), 1, base::matrix(seq(1,1000), 1000,1), 
+                col = rampColours(1000),
+                pin = c(1, 5),
+                axes = FALSE,
+                ann = FALSE)
+
+```
+
+### Observed (naïve) SIR
+
+```{r boundaries-map, fig.asp = (9/16), fig.width = 15 * 2.5}
+
+### Map observed SIR -----------------------------------------------------------
+
+# Find the absolute maximum SIR on the log scale
+
+max_log_sir <- base::as.integer(base::max(base::abs(base::log(lip_sf[lip_sf$obs_ca != 0, ]$obs_sir_est))) / 1) + 1
+
+# Produce the raw SIR map ------------------------------------------------------
+
+map_obs_sir <- ggplot2::ggplot() +
+  
+  # Add districts with SIR > 0
+  
+  ggplot2::geom_sf(data = lip_sf %>% dplyr::filter(obs_sir_est > 0),
+                   mapping = ggplot2::aes(fill = obs_sir_est),
+                   col = "grey50") +
+  
+  # Add districts with SIR = 0
+  
+  ggplot2::geom_sf(data = lip_sf %>% dplyr::filter(obs_sir_est == 0),
+                   mapping = ggplot2::aes(alpha = base::factor("SIR = 0", ordered = TRUE)),
+                   fill = "grey90",
+                   colour = "grey50",
+                   size = 0.1) +
+  
+  # Add SIR probability category
+  
+  ggplot2::geom_point(data = lip_sf %>% dplyr::filter(obs_sir_cat != ""),
+                      mapping = ggplot2::aes(shape = obs_sir_cat,
+                                             geometry = geom),
+                      fill = "black",
+                      stat = "sf_coordinates") +
+  
+  # Add Scotland boundary
+  
+  ggplot2::geom_sf(data = sct_sf,
+                   fill = NA,
+                   colour = "Black",
+                   linewidth = 1) +
+  
+  # Add fill aesthetic gradient mapping
+  
+  ggplot2::scale_fill_gradient2("Observed SIR",
+                                low = col_pal["low"], # blue
+                                mid = col_pal["mid"], # yellow
+                                high = col_pal["high"], # darkblue
+                                midpoint = 0,
+                                na.value = NA,
+                                limits = c(base::exp(-max_log_sir), base::exp(max_log_sir)),
+                                breaks = base::exp(base::seq(-max_log_sir, max_log_sir, 0.5)),
+                                labels = base::format(base::round(exp(seq(-max_log_sir, max_log_sir, 0.5)), 2), nsmall = 2),
+                                trans = "log") +
+  
+  ggplot2::scale_alpha_manual(values = c("SIR = 0" = 1)) +
+  
+  # Add shape aesthic mapping
+  
+  ggplot2::scale_shape_manual("Probability value",
+                              values = c("++" = 24,
+                                         "+" = 2,
+                                         "-" = 6,
+                                         "--" = 25),
+                              breaks = c("++", "+", "-", "--"),
+                              labels = c("++" = "SIR > 1, p < 0.01",
+                                         "+" = "SIR > 1, p < 0.05",
+                                         "-" = "SIR < 1, p < 0.05",
+                                         "--" = "SIR < 1, p < 0.01")) +
+  
+  # Add code labels to identify districts
+  
+  # ggrepel::geom_text_repel(data = lip_sf %>% dplyr::filter(! dist_name %in% exc_labels),
+  #                          inherit.aes = FALSE,
+  #                          mapping = ggplot2::aes(label = dist_name,
+  #                                                 geometry = geom),
+  #                          stat = "sf_coordinates",
+  #                          force = 0,
+  #                          color = "white",
+  #                          bg.color = "grey30",
+  #                          bg.r = 0.1,
+  #                          size = 9/.pt) +
+  
+  # Pretty up the legend
+  
+  ggplot2::guides(fill = ggplot2::guide_colourbar(frame.colour = "black", 
+                                                  frame.linewidth = 0.25,
+                                                  ticks.colour = "black",
+                                                  ticks.linewidth = 0.25,
+                                                  order = 1),
+                  alpha = ggplot2::guide_legend(title = NULL, order = 2)) +
+  
+  # Pretty up the map
+  
+  ggplot2::theme_bw() + 
+  
+  ggplot2::theme(axis.title = ggplot2::element_blank(),
+                 axis.text = ggplot2::element_blank(),
+                 axis.ticks = ggplot2::element_blank(),
+                 
+                 legend.position = "inside",
+                 legend.margin = ggplot2::margin(-3, 0, 0, 0),
+                 legend.position.inside = c(0.15, 0.85),
+                 
+                 panel.grid = ggplot2::element_blank(),
+                 
+                 text = ggplot2::element_text(size = 12))
+
+# Map relative standard errors for the observed SIR ----------------------------
+
+map_obs_rse <- ggplot2::ggplot(data = lip_sf) +
+  
+  # Add relative standard errors for districts with SIR > 0
+  
+  # Add districts with SIR > 0
+  
+  ggplot2::geom_sf(data = lip_sf %>% dplyr::filter(obs_sir_est > 0),
+                   mapping = ggplot2::aes(fill = obs_sir_rse),
+                   col = "grey50") +
+  
+  # Add districts with SIR = 0
+  
+  ggplot2::geom_sf(data = lip_sf %>% dplyr::filter(obs_sir_est == 0),
+                   mapping = ggplot2::aes(alpha = base::factor("SIR = 0", ordered = TRUE)),
+                   fill = "grey90",
+                   colour = "grey50",
+                   size = 0.1) +
+  
+  # Add Scotland boundary
+  
+  ggplot2::geom_sf(data = sct_sf,
+                   fill = NA,
+                   colour = "Black",
+                   linewidth = 1) +
+  
+  # Add code labels to identify districts
+  
+  ggrepel::geom_text_repel(data = lip_sf %>% dplyr::filter(! dist_name %in% exc_labels),
+                           inherit.aes = FALSE,
+                           mapping = ggplot2::aes(label = dist_name,
+                                                  geometry = geom),
+                           stat = "sf_coordinates",
+                           force = 0,
+                           color = "white",
+                           bg.color = "grey30",
+                           bg.r = 0.1,
+                           size = 12/.pt) +
+  
+  # Add fill aesthetic gradient mapping
+  
+  ggplot2::scale_fill_gradient2("Relative standard error",
+                                low = col_pal["low"], # blue
+                                mid = col_pal["mid"], # yellow
+                                high = col_pal["high"], # darkblue
+                                midpoint = 0.5,
+                                na.value = NA,
+                                limits = c(0, 1),
+                                breaks = base::seq(0, 1, 0.1),
+                                labels = base::seq(0, 1, 0.1)) +
+  
+  ggplot2::scale_alpha_manual(values = c("SIR = 0" = 1)) +
+  
+  ggplot2::guides(fill = ggplot2::guide_colourbar(frame.colour = "black", 
+                                                  frame.linewidth = 0.25,
+                                                  ticks.colour = "black",
+                                                  ticks.linewidth = 0.25,
+                                                  order = 1),
+                  alpha = ggplot2::guide_legend(title = NULL, order = 2)) +
+  
+  ggplot2::theme_bw() + 
+  
+  ggplot2::theme(axis.title = ggplot2::element_blank(),
+                 axis.text = ggplot2::element_blank(),
+                 axis.ticks = ggplot2::element_blank(),
+                 
+                 legend.position = "inside",
+                 legend.margin = ggplot2::margin(-3, 0, 0, 0),
+                 # legend.position.inside = c(0.15, 0.88),
+                 legend.position.inside = c(0.18, 0.90),
+                 legend.text = ggplot2::element_text(size = 10),
+                 
+                 panel.grid = ggplot2::element_blank(),
+                 
+                 text = ggplot2::element_text(size = 12))
+
+# Map expected precision of SIR proportional to expected cancer cases -----------
+
+map_exp_rse <- ggplot2::ggplot(data = lip_sf) +
+  
+  # Add relative standard errors for districts with SIR > 0
+  
+  # Add districts with E(R) > 0
+  
+  ggplot2::geom_sf(data = lip_sf, #  %>% dplyr::filter(obs_sir_est > 0),
+                   mapping = ggplot2::aes(fill = exp_sir_rse),
+                   col = "grey50") +
+  
+  # Add Scotland boundary
+  
+  ggplot2::geom_sf(data = sct_sf,
+                   fill = NA,
+                   colour = "Black",
+                   linewidth = 1) +
+  
+  # Add fill aesthetic gradient mapping
+
+  ggplot2::scale_fill_gradient2(base::expression("SE(R)" %prop% "1/E"), # "Expected precision of SIR",
+                                low = col_pal["low"], # blue
+                                mid = col_pal["mid"], # yellow
+                                high = col_pal["high"], # darkblue
+                                midpoint = 0.5,
+                                na.value = NA,
+                                limits = c(0, 1),
+                                breaks = base::seq(0, 1, 0.1),
+                                labels = base::seq(0, 1, 0.1)) +
+  
+  # ggplot2::scale_alpha_manual(values = c("SIR = 0" = 1)) +
+  
+  ggplot2::guides(fill = ggplot2::guide_colourbar(frame.colour = "black", 
+                                                  frame.linewidth = 0.25,
+                                                  ticks.colour = "black",
+                                                  ticks.linewidth = 0.25,
+                                                  order = 1),
+                  alpha = ggplot2::guide_legend(title = NULL, order = 2)) +
+  
+  ggplot2::theme_bw() + 
+  
+  ggplot2::theme(axis.title = ggplot2::element_blank(),
+                 axis.text = ggplot2::element_blank(),
+                 axis.ticks = ggplot2::element_blank(),
+                 
+                 legend.position = "inside",
+                 legend.margin = ggplot2::margin(-3, 0, 0, 0),
+                 # legend.position.inside = c(0.15, 0.88),
+                 legend.position.inside = c(0.13, 0.905),
+                 legend.text = ggplot2::element_text(size = 10),
+                 
+                 panel.grid = ggplot2::element_blank(),
+                 
+                 text = ggplot2::element_text(size = 12))
+
+## Output observed and BYM smoothed SIR for lip cancer risk --------------------
+
+(map_obs_sir | map_obs_rse | map_exp_rse) +
+  patchwork::plot_annotation(title = "Observed SIR estimates and p-values and observed and expected relative standard errors for male lip cancer in Scotland (1975-1980)", 
+                             theme = theme(plot.title = element_text(hjust = 0.5)))
+
+```
+
+### Queen adjacency matrix
+
+Prior to conducting the BYM CAR analysis, we need to construct the queen adjacency matrix. This is easily using the `spdep::poly2nb` function.
+
+```{r adjacency-matrix}
+
+### Create Queen adjacency (contiguity) list for each district -----------------
+
+# The spdep::poly2nb function constructs a list of neighbours from a polygon object
+
+adj_nb_list <- spdep::poly2nb(lip_sf, 
+                              queen = TRUE, 
+                              row.names = base::row.names(lip_sf))
+
+base::print(adj_nb_list)
+  
+# View adjacency list structure
+
+utils::head(adj_nb_list)
+
+```
+
+The warning message is telling us three districts (districts 6, 8 and 11) have no neighbours, which is reasonable as there are three island areas (districts), and that one has (district 4) has disjoint connected subgraphs. This likely means the area is sharing multiple borders (edges) with the same neighbour. This can occur when there a "slivers" --- small gaps --- in your spatial data between bordering spatial units. Given the map available for Scotland looks like a five-year old has cut it out of coloured paper with blunt craft scissors and from memory, this almost certainly likely. We can check these warnings are OK via some additional maps.
+
+```{r dist-codes, fig.asp = (9/16), fig.width = 15 * 2.5}
+
+# Provide district map for reference -------------------------------------------
+
+adj_dist_map <- ggplot2::ggplot() +
+  
+  # Add districts with SIR > 0
+  
+  ggplot2::geom_sf(data = lip_sf,
+                   fill = NA,
+                   col = "black",
+                   linewidth = 0.25) +
+  
+  # Add Scotland boundary
+  
+  ggplot2::geom_sf(data = sct_sf,
+                   fill = NA,
+                   colour = "Black",
+                   linewidth = 1) +
+  
+  # Add code labels to identify districts
+  
+  ggplot2::geom_text(data = lip_sf,
+                           inherit.aes = FALSE,
+                           mapping = ggplot2::aes(label = dist_code,
+                                                  geometry = geom),
+                           stat = "sf_coordinates",
+                           color = "black",
+                           size = 12/.pt) +
+  
+  ggplot2::theme_bw() + 
+  
+  ggplot2::theme(axis.title = ggplot2::element_blank(),
+                 axis.text = ggplot2::element_blank(),
+                 axis.ticks = ggplot2::element_blank(),
+                 
+                 legend.position = "inside",
+                 legend.margin = ggplot2::margin(-3, 0, 0, 0),
+                 # legend.position.inside = c(0.15, 0.88),
+                 legend.position.inside = c(0.13, 0.905),
+                 legend.text = ggplot2::element_text(size = 10),
+                 
+                 panel.grid = ggplot2::element_blank(),
+                 
+                 text = ggplot2::element_text(size = 12))
+
+# Map some neighbours ----------------------------------------------------------
+
+adj_nb_map <- ggplot2::ggplot() +
+  
+  
+  # Add districts
+  
+  ggplot2::geom_sf(data = lip_sf,
+                   colour = "grey50",
+                   fill = NA,
+                   linewidth = 0.1) +
+  
+  # Areas of interest
+  
+  #  4 = Berwickshire
+  # 19 = Inverness
+  # 22 = Aberdeen
+  # 49 = Glasgow
+  
+  ggplot2::geom_sf(data = lip_sf %>% filter(row.names(.) %in% c(4, 19, 22, 49)),
+                   mapping = ggplot2::aes(fill = "Analysis district"),
+                   colour = "black",
+                   linewidth = 0.1) +
+  
+  # Neighbours of areas of interest
+  
+  ggplot2::geom_sf(data = lip_sf %>% filter(row.names(.) %in% unlist(adj_nb_list[c(4, 19, 22, 49)])),
+                   mapping = aes(fill = "Queen neighbours"),
+                   colour = "black",
+                   linewidth = 0.1) +
+  
+  # Add Scotland boundary
+  
+  ggplot2::geom_sf(data = sct_sf,
+                   fill = NA,
+                   colour = "Black",
+                   linewidth = 1) +
+  
+  # Add code labels to identify districts
+  
+  ggrepel::geom_text_repel(data = (lip_sf %>%
+                                     dplyr::filter(dist_name %in% c("Berwickshire",
+                                                                    "Inverness",
+                                                                    "Aberdeen",
+                                                                    "Glasgow"))),
+                           inherit.aes = FALSE,
+                           mapping = ggplot2::aes(label = dist_name,
+                                                  geometry = geom),
+                           stat = "sf_coordinates",
+                           force = 0,
+                           color = "white",
+                           bg.color = "grey30",
+                           bg.r = 0.1,
+                           size = 12/.pt) +
+  
+  # Add fill aesthetic gradient mapping
+  
+  ggplot2::scale_fill_manual("Adjacency examples",
+                             breaks = c("Analysis district",
+                                        "Queen neighbours"),
+                             values = c(rgb(230, 70, 38, maxColorValue = 255),
+                                        rgb(255, 212, 102, maxColorValue = 255))) +
+  
+  # Add X and Y coordinate labels
+  
+  ggplot2::theme_bw() +
+  
+  ggplot2::theme(axis.title = ggplot2::element_blank(),
+                 axis.text = ggplot2::element_blank(),
+                 axis.ticks = ggplot2::element_blank(),
+                 
+                 legend.position = "inside",
+                 legend.margin = ggplot2::margin(0, 0, 0, 0),
+                 legend.position.inside = c(0.2, 0.93),
+                 
+                 panel.grid = ggplot2::element_blank(),
+                 
+                 text = ggplot2::element_text(size = 12))
+
+# Plot neighbours connectivity graph -------------------------------------------
+
+# Genereate connectivity arcs between spatial units and their neighbours
+
+# From: https://mbjoseph.github.io/posts/2018-12-27-plotting-spatial-neighbors-in-ggplot2/
+
+# The spdep::nb2lines function creates linestring geometries linking the centroids
+# of neighbouring districts
+
+adj_nb_arc <- spdep::nb2lines(adj_nb_list,
+                              coords = st_centroid(st_geometry(lip_sf)))
+
+# Calculate the number of neighbours for each district by summarising the length
+# of each element in the adj_nb_list
+
+adj_nb_num <- lapply(adj_nb_list, length) %>%
+  do.call(rbind, .) %>%
+  as.data.frame() %>%
+  setNames("neighbours")
+
+## Map adjacency marks and symbolise by number of neighbours -------------------
+
+adj_con_map <- ggplot() +
+  
+  # Add districts
+  
+  geom_sf(data = lip_sf %>% bind_cols(adj_nb_num),
+          aes(fill = neighbours),
+          colour = "grey50",
+          linewidth = 0.1,
+          alpha = 0.75) +
+  
+  # Add neighbour connectivity arcs
+  
+  geom_sf(data = adj_nb_arc,
+          colour = "black",
+          linewidth = 0.1) +
+  
+  # Add district centroids
+  
+  geom_sf(data = st_centroid(st_geometry(lip_sf)),
+          shape = 16,
+          colour = "black",
+          size = 2.75) +
+  
+  # Add code labels to identify districts
+  
+  ggrepel::geom_text_repel(data = lip_sf %>% dplyr::filter(! dist_name %in% exc_labels),
+                           inherit.aes = FALSE,
+                           mapping = ggplot2::aes(label = dist_name,
+                                                  geometry = geom),
+                           stat = "sf_coordinates",
+                           force = 0,
+                           color = "white",
+                           bg.color = "grey30",
+                           bg.r = 0.1,
+                           size = 12/.pt) +
+  
+  # Add fill aesthetic gradient mapping
+  
+  scale_fill_gradient("Neighbours",
+                      low = "lightyellow",
+                      high = "darkred",
+                      limits = c(0, 11),
+                      breaks = seq(0, 11, 1),
+                      # labels = c("1", "", "", "", "", "6", "", "", "", "", "", "12"),
+                      guide = guide_colorbar(frame.colour = "black", 
+                                             frame.linewidth = 0.25,
+                                             ticks.colour = "black",
+                                             ticks.linewidth = 0.25)) +
+  
+  theme_bw() +
+  
+  theme(axis.title = ggplot2::element_blank(),
+        axis.text = ggplot2::element_blank(),
+        axis.ticks = ggplot2::element_blank(),
+        
+        legend.position = "inside",
+        legend.margin = ggplot2::margin(0, 0, 0, 0),
+        legend.position.inside = c(0.15, 0.90),
+        
+        panel.grid = ggplot2::element_blank(),
+        
+        text = ggplot2::element_text(size = 12))
+
+## Output adjacency maps -------------------------------------------------------
+
+(adj_dist_map | adj_nb_map | adj_con_map) +
+  patchwork::plot_annotation(title = "Spatial neighbours and links maps for Scottish administrative districts", 
+                             theme = theme(plot.title = element_text(hjust = 0.5)))
+
+```
+
+Based on these maps, we can be confident the three districts without neighbours are island areas (Western Isles, Orkney and Shetland) and that district 4 (Berwickshire) is connected to the correct number of neighbours (n=3). We can now convert the `spdep` adjacency matrix to WinBUGS weight matrix format, which is required for fitting BYM CAR models in `nimble`.
+
+```{r wb-matrix}
+
+### Output adjacency matrix in WinBUGS format for use in BYM models ------------
+
+# The spdep::nb2WB function can be used to make WinBUGS neighbours list 
+
+adj_nb_wgt <- spdep::nb2WB(nb = adj_nb_list)
+
+# View WinBUIGS adjacency list
+
+base::print(adj_nb_wgt)
+
+# The *adj* vector defines the district indexes for the neighbours of the ith
+# analysis unit; the *weights* vector indicates the weight assigned to each
+# neighbour when calculating the conditional autoregression spatial term
+# in the BYM model; and *num* indicates how many of the neighbours in *adj*
+# border the ith analysis unit. For example, the first element of *num* indicates
+# that the district of Skye-Lochalsh (row 1 in *lip_sf*) has three neighbours, 
+# which *adj* indicates correspond to row indexes 5, 9 and 19 (Ross-Cromarty,
+# Lochaber and Inverness districts) in *lip_sf*, and are assigned weights of 1, 
+# 1 and 1 when calculating the CAR spatial term for Skye-Lochalsh.
+
+```
+
+### BYM CAR disease mapping model
+
+We now have everything necessary to run a BYM CAR disease mapping model. All that is left is to format the data in the way `nimble` expects it to be, write and compile our model, and then run and summarise its output.
+
+```{r BYM, fig.asp = (9/16), fig.width = 15 * 2.5}
+
+### Assemble objects needed to run a BYM disease model -------------------------
+
+## Obtain the number of districts ----------------------------------------------
+
+N <- dim(lip_sf)[1]
+
+## Format SIR data for NIMBLE in a list ----------------------------------------
+
+bym_data <- base::list(obs = lip_sf$obs_ca)               # Observed lip cancer cases
+
+## List constants required by NIMBLE to fit BYM model --------------------------
+
+bym_consts <-base::list(N = N,                          # Number of districts 
+                        
+                        exp = lip_sf$exp_ca,               # Expected lip cancer cases
+                        
+                        # Adjacency matrix values used to specify CAR distribution
+                        
+                        L = length(adj_nb_wgt$weights),  # Total number of neighbours        
+                        adj = adj_nb_wgt$adj,            # Vector of neighbours for each ditrict                            
+                        num = adj_nb_wgt$num,            # Vector of neighbour counts for each district
+                        weights = adj_nb_wgt$weights)    # Weight for each neighbour (all 1 for a queen matrix
+
+base::print(bym_consts)
+
+## Write the model specification -----------------------------------------------
+
+# NOTE: Don't use R namespaces as models are run by the nimble C++ compiler
+
+bym_code <- nimble::nimbleCode(
+  {
+    for (i in 1:N){
+      
+      # Poisson likelihood for observed counts
+      
+      obs[i] ~ dpois(lambda[i]) 
+      log(lambda[i]) <- alpha + s[i] + u[i] + log(exp[i])
+      
+      # Prior for the area-specific unstructured random effect
+      
+      u[i] ~ dnorm(0, tau = tau.u)    
+      
+      # Smoothed area-specific SIR
+      
+      smoothed.sir[i] <- exp(alpha + s[i] + u[i])
+      
+      # Overall residual area-specific cancer risk above or below the Scottish average
+      
+      residual.sir[i] <- exp(s[i] + u[i])
+      
+      # Residual area-specific cancer risk due to unobserved and spatially structured factors (s)
+      
+      residual.sir.s[i] <- exp(s[i])
+      
+      # Residual area-specific lip cancer risk due to unobserved and spatially unstructured factors (u)
+      
+      residual.sir.u[i] <- exp(u[i])
+      
+      # Posterior probabilities for residual risk - is the SIR for the ith district higher or lower than 1
+      
+      residual.sir.gt1[i] <- 1 - step(1 - residual.sir[i]) # Posterior probability that SIR > 1
+      residual.sir.lt1[i] <- 1 - step(residual.sir[i] - 1) # Posterior probability that SIR < 1                         
+    } 
+    
+    # Prior for the area-specific spatially structured random effect (ICAR)
+    
+    s[1:N] ~ dcar_normal(adj[1:L],
+                         weights[1:L],
+                         num[1:N],
+                         tau.s,
+                         zero_mean = 1)
+    
+    # Vague uniform prior for intercept
+    
+    alpha ~ dflat()                                       
+    
+    # Overall SIR for the study region (lip cancer risk common to all areas)
+    
+    overall.sir <- exp(alpha)                                
+    
+    # Hyperprior distribution on inverse variance (precision) for the unstructured variance component (u)
+    
+    tau.u ~ dgamma(1, 0.01)                            
+    
+    # Variance of u (unstructured variance component)
+    
+    sigma2.u <- 1/tau.u                                   
+    
+    # Hyperprior distribution on inverse variance (precision) for the spatially structured variance component (s)
+    
+    tau.s ~ dgamma(1, 0.01)                              
+    
+    # variance of s (spatial variance component)
+    
+    sigma2.s <- 1/tau.s
+    
+  }
+)
+
+base::print(bym_code)
+
+## Specify initial values for nodes as a data list -----------------------------
+
+# alpha = intercept
+# u     = prior for unstructured random effect
+# tau.u = hyperprior for the precision of u
+# s     = prior for structured random effect
+# tau.s = hyperprior for the precision of s
+
+bym_inits <- list(list(alpha = 0.01,                              # MCMC chain 1 
+                       u = base::rep(0.01, times = N), 
+                       tau.u = 10,
+                       s = base::rep(0.01, times = N),
+                       tau.s = 10),
+                  list(alpha = 0.5,                               # MCMC chain 2
+                       u = base::rep(-0.01, times = N),
+                       tau.u = 1,
+                       s = base::rep(-0.01, times = N),
+                       tau.s = 1))
+
+base::print(bym_inits)
+
+## Select parameters (nodes) to monitor ----------------------------------------
+
+bym_params <- c("alpha",
+                "u",
+                "s",
+                "sigma2.s",
+                "sigma2.u",
+                "overall.sir",
+                "residual.sir",
+                "residual.sir.s",
+                "residual.sir.u",
+                "smoothed.sir",
+                "residual.sir.gt1",
+                "residual.sir.lt1")
+
+print(bym_params)
+
+## Specify the MCMC sampler settings -------------------------------------------
+
+n_chains <- 2             # Number of MCMC chains to run  
+n_burnin <- 50000         # Number of iterations to use as model burn-in
+n_iter <- n_burnin * 2    # Number of iterations per chain
+n_thin <- 1              # Thinning interval for chain, i.e., keep every nth sample
+
+# Burn-in samples per chain (n = 2) - used to converge model
+
+(n_burnin / n_thin)                # 5000 samples used to burn the model in
+
+# Inference samples per chain (n = 2)
+
+((n_iter - n_burnin) / n_thin)     # 5000 samples from the posterior distribution summarised for inference
+
+### Fit the model --------------------------------------------------------------
+
+# The nimble showCompilerOutput and nimbleMCMC options are set to TRUE for
+# demonstration purposes only. You can exclude these options if you prefer
+
+nimbleOptions(showCompilerOutput = TRUE)
+bym_samples <- nimble::nimbleMCMC(code = bym_code,
+                                  data = bym_data,
+                                  constants = bym_consts, 
+                                  inits = bym_inits,
+                                  monitors = bym_params,
+                                  niter = n_iter,
+                                  nburnin = n_burnin,
+                                  thin = n_thin, 
+                                  nchains = n_chains, 
+                                  setSeed = c(9, 10),              # Seed for randome number generator - important for reproducibility - need one seed per chain  
+                                  progressBar = TRUE,
+                                  samplesAsCodaMCMC = TRUE, 
+                                  summary = TRUE, 
+                                  WAIC = TRUE)
+nimbleOptions(showCompilerOutput = FALSE)
+
+# See https://stats.stackexchange.com/q/304958 for discussion about WAIC warning
+
+## View raw list output returned my the MCMC sampler ---------------------------
+
+# Sampled values from the posterior distribution (n = n_iter - n_burin = 5,000)
+
+utils::head(as.data.frame.matrix(bym_samples$samples$chain1), n = 10) 
+
+# Summarised sample values from the posterior distribution (mean, median, std and quantiles 2.5 and 97.5)
+utils::head(bym_samples$summary$all.chains, n = 100)
+
+### Check model convergence using the Gelman-Rubin convergence diagnostic ------
+
+# The Gelman-Rubin compares the within chain variation to the between chain
+# variation for each parameter. If the chains have converged on the stationary
+# distribution, then it should be impossible to distinguish between the chains.
+# It is a ratio measures, and values < 1.1 are considered evidence of chain
+# convergence.
+
+# gr.diag <- coda::gelman.diag(bym_samples$samples, multivariate = FALSE)
+# 
+# # List all parameters that are not posterior probabilities
+# 
+# gr.diag.inc <- stringr::str_subset(base::dimnames(gr.diag$psrf)[[1]], "gt1|lt1", negate = TRUE)
+# 
+# ## Are all values < 1.1? If yes, this is evidence of convergence ---------------
+# 
+# base::all(gr.diag$psrf[gr.diag.inc,"Point est."] < 1.1) # Don't check posterior probabilities - these are threshold nodes and do not need to converge
+# 
+# ## If no, then Which parameters have a value >= 1.1? ---------------------------
+# 
+# base::which(gr.diag$psrf[gr.diag.inc,"Point est."] > 1.1)
+
+### Check trace, density and autocorrelation plots for convergence -------------
+
+# Import MCMC samples into a ggs that can be used with ggs_* graphical functions
+
+bym_ggmcmc <- ggmcmc::ggs(bym_samples$samples)
+
+## Check the overall SIR -------------------------------------------------------
+
+# Generate trace, density and autocorrelation plots
+
+trace_overall.sir <- bym_ggmcmc %>% 
+  dplyr::filter(Parameter == "overall.sir") %>% 
+  ggmcmc::ggs_traceplot() +
+  ggplot2::theme_bw() +
+  ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+density_overall.sir <- bym_ggmcmc %>% 
+  dplyr::filter(Parameter == "overall.sir") %>% 
+  ggmcmc::ggs_density() +
+  ggplot2::theme_bw() +
+  ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+acf_overall.sir <- bym_ggmcmc %>%
+  dplyr::filter(Parameter == "overall.sir") %>% 
+  ggmcmc::ggs_autocorrelation() +
+  ggplot2::theme_bw() +
+  ggplot2::theme(text = element_text(size = 12))
+
+# Plot visual convergence diagnostics
+
+base::print((trace_overall.sir | density_overall.sir) / acf_overall.sir) +
+  patchwork::plot_annotation(title = "Trace, density and autocorrelation plots for overall SIR",
+                             theme = ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
+
+## Check the spatially variance component --------------------------------------
+
+# Generate trace, density and autocorrelation plots
+
+trace_sigma2.s <- bym_ggmcmc %>% 
+  dplyr::filter(Parameter == "sigma2.s") %>% 
+  ggmcmc::ggs_traceplot() +
+  ggplot2::theme_bw() +
+  ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+density_sigma2.s <- bym_ggmcmc %>% 
+  dplyr::filter(Parameter == "sigma2.s") %>% 
+  ggmcmc::ggs_density() +
+  ggplot2::theme_bw() +
+  ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+acf_sigma2.s <- bym_ggmcmc %>%
+  filter(Parameter == "sigma2.s") %>% 
+  ggmcmc::ggs_autocorrelation() +
+  ggplot2::theme_bw() +
+  ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+# Plot visual convergence diagnostics
+
+base::print((trace_sigma2.s | density_sigma2.s)/acf_sigma2.s) +
+  patchwork::plot_annotation(title = "Trace, density and autocorrelation plots for spatially correlated variance component (s)",
+                             theme = ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
+
+## Check the uncorrelated variance component -----------------------------------
+
+# Generate trace, density and autocorrelation plots
+
+trace_sigma2.u <- bym_ggmcmc %>% 
+  dplyr::filter(Parameter == "sigma2.u") %>% 
+  ggmcmc::ggs_traceplot() +
+  ggplot2::theme_bw() +
+  ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+density_sigma2.u <- bym_ggmcmc %>% 
+  dplyr::filter(Parameter == "sigma2.u") %>% 
+  ggmcmc::ggs_density() +
+  ggplot2::theme_bw() +
+  ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+acf_sigma2.u <- bym_ggmcmc %>%
+  filter(Parameter == "sigma2.u") %>% 
+  ggmcmc::ggs_autocorrelation() +
+  ggplot2::theme_bw() +
+  ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+base::print((trace_sigma2.u | density_sigma2.u) /acf_sigma2.u) +
+  patchwork::plot_annotation(title = "Trace, density and autocorrelation plots for uncorrelated variance component (u)",
+                             theme = ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
+
+## Check the smoothed SIR for Perth-Kinross (29) -------------------------------
+
+# This district has the most neighbours
+
+# Generate trace, density and autocorrelation plots
+
+trace_smoothed.sir_29 <- bym_ggmcmc %>% 
+  dplyr::filter(Parameter == "smoothed.sir[29]") %>% 
+  ggmcmc::ggs_traceplot() +
+  ggplot2::theme_bw() +
+  ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+density_smoothed.sir_29 <- bym_ggmcmc %>% 
+  dplyr::filter(Parameter == "smoothed.sir[29]") %>% 
+  ggmcmc::ggs_density() +
+  ggplot2::theme_bw() +
+  ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+acf_smoothed.sir_29 <- bym_ggmcmc %>%
+  filter(Parameter == "smoothed.sir[29]") %>% 
+  ggmcmc::ggs_autocorrelation() +
+  ggplot2::theme_bw() +
+  ggplot2::theme(text = ggplot2::element_text(size = 12))
+
+# Plot visual convergence diagnostics
+
+base::print((trace_smoothed.sir_29 | density_smoothed.sir_29) / acf_smoothed.sir_29) +
+  patchwork::plot_annotation(title = "Trace, density and autocorrelation plots for Perth-Kinross smoothed SIR",
+                             theme = ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
+
+### Summarise across MCMC samples to obtained BYM model estimates --------------
+
+## Extract alpha, sigma2.s and sigma2.u ----------------------------------------
+
+bym_ests <- bym_samples$summary$all.chains[c("alpha",
+                                             "sigma2.s",
+                                             "sigma2.u"),
+                                           c("Median",
+                                             "95%CI_low",
+                                             "95%CI_upp")] %>%
+  
+  # Convert matrix to data frame
+  
+  base::as.data.frame() %>%
+  
+  # Rename columns
+  
+  stats::setNames(c("median", "lower_95_ci", "upper_95_ci")) %>%
+  
+  # Make the data frame row names an explicit variable called *parameter*
+  
+  tibble::rownames_to_column(var = "parameter") %>%
+  
+  # Exponentiate the parameter and 95% CI estimates for alpha to obtain overall SIR effect measure
+  
+  dplyr::mutate(dplyr::across(c(median, lower_95_ci, upper_95_ci), ~ base::ifelse(parameter == "alpha", base::exp(.), NA), .names = "{.col}_exp")) %>%
+  
+  # Format estimates as text variables with three decimal places
+  
+  dplyr::mutate(dplyr::across(dplyr::where(is.numeric), ~ base::ifelse(base::is.na(.), "", base::format(base::round(., 3), nsmall = 3))))
+
+### Print model estimates and WIAC ---------------------------------------------
+
+base::print(list("Model estimate" = bym_ests,
+                 "WAIC" = bym_samples$WAIC$WAIC))
+
+### Summarise across MCMC samples to obtain smoothed SIR estimates -------------
+
+# Create data set of smoothed and residual risk of lip cancer
+
+bym_sf <- lip_sf %>%
+  
+  # Smoothed SIR estimate
+  
+  dplyr::bind_cols(bym_samples$summary$all.chains[base::paste0("smoothed.sir[", 1:N, "]"), c("Median", "95%CI_low", "95%CI_upp")] %>%
+                     base::as.data.frame() %>%
+                     stats::setNames(c("bym_smoothed_sir_est", "bym_smoothed_sir_l95", "bym_smoothed_sir_uci"))) %>%
+  
+  # Residual SIR estimate
+  
+  dplyr::bind_cols(bym_samples$summary$all.chains[base::paste0("residual.sir[", 1:N, "]"), c("Median", "95%CI_low", "95%CI_upp")] %>%
+                     base::as.data.frame() %>%
+                     stats::setNames(c("bym_residual_sir_est", "bym_residual_sir_l95", "bym_residual_sir_uci"))) %>%
+  
+  # Residual s SIR estimate
+  
+  dplyr::bind_cols(bym_samples$summary$all.chains[base::paste0("residual.sir.s[", 1:N, "]"), c("Median", "95%CI_low", "95%CI_upp")] %>%
+                     base::as.data.frame() %>%
+                     stats::setNames(c("bym_residual_sir_s_est", "bym_residual_sir_s_l95", "bym_residual_sir_s_uci"))) %>%
+  
+  # Residual u SIR estimate
+  
+  dplyr::bind_cols(bym_samples$summary$all.chains[base::paste0("residual.sir.u[", 1:N, "]"), c("Median", "95%CI_low", "95%CI_upp")] %>%
+                     base::as.data.frame() %>%
+                     stats::setNames(c("bym_residual_sir_u_est", "bym_residual_sir_u_l95", "bym_residual_sir_u_uci"))) %>%
+  
+  # Posterior probabilities for residual risk > 1
+  
+  dplyr::bind_cols(bym_samples$summary$all.chains[base::paste0("residual.sir.gt1[", 1:N, "]"), "Mean"] %>%
+                     base::as.data.frame() %>%
+                     stats::setNames("bym_residual_sir_gt1")) %>%
+  
+  # Posterior probabilities for residual risk < 1
+  
+  dplyr::bind_cols(bym_samples$summary$all.chains[base::paste0("residual.sir.lt1[", 1:N, "]"), "Mean"] %>%
+                     base::as.data.frame() %>%
+                     stats::setNames("bym_residual_sir_lt1")) %>%
+  
+  # Annotate exceedence probabilities
+  
+  dplyr::mutate(bym_residual_sir_cat = dplyr::case_when(bym_residual_sir_gt1 > 0.995 ~ "++",
+                                                        bym_residual_sir_gt1 > 0.975 ~ "+",
+                                                        bym_residual_sir_lt1 > 0.995 ~ "--",
+                                                        bym_residual_sir_lt1 > 0.975 ~ "-",
+                                                        .default = ""))
+
+### Map BYM smoothed SIR for districts -----------------------------------------
+
+map_bym_residual_sir <- ggplot() +
+  
+  # Add SIR estimates
+  
+  geom_sf(data = bym_sf,
+          aes(fill = bym_residual_sir_est),
+          col = "grey50",
+          linewidth = 0.1) +
+  
+  # Add SIR posterior probabilities
+  
+  ggplot2::geom_point(data = bym_sf %>% dplyr::filter(bym_residual_sir_cat != ""),
+                      mapping = ggplot2::aes(shape = bym_residual_sir_cat,
+                                             geometry = geom),
+                      fill = "black",
+                      stat = "sf_coordinates") +
+  
+  # Add Scotland boundary
+  
+  ggplot2::geom_sf(data = sct_sf,
+                   fill = NA,
+                   colour = "Black",
+                   linewidth = 1) +
+  
+  # Add fill aesthetic gradient mapping
+  
+  ggplot2::scale_fill_gradient2("Smoothed SIR",
+                                low = col_pal["low"], # blue
+                                mid = col_pal["mid"], # yellow
+                                high = col_pal["high"], # darkblue
+                                midpoint = 0,
+                                na.value = NA,
+                                limits = c(base::exp(-max_log_sir), base::exp(max_log_sir)),
+                                breaks = base::exp(base::seq(-max_log_sir, max_log_sir, 0.5)),
+                                labels = base::format(base::round(exp(seq(-max_log_sir, max_log_sir, 0.5)), 2), nsmall = 2),
+                                trans = "log") +
+  
+  # Add shape aesthic mapping
+  
+  ggplot2::scale_shape_manual("Posterior probabilities",
+                              values = c("++" = 24,
+                                         "+" = 2,
+                                         "-" = 6,
+                                         "--" = 25),
+                              breaks = c("++", "+", "-", "--"),
+                              labels = c("++" = "SIR > 1, p > 97.5%",
+                                         "+" = "SIR > 1, p > 95.0%",
+                                         "-" = "SIR < 1, p > 95.0%",
+                                         "--" = "SIR < 1, p > 97.5%")) +
+  
+  # Format legends
+  
+  guides(fill = guide_colourbar(frame.colour = "black", 
+                                frame.linewidth = 0.25,
+                                ticks.colour = "black",
+                                ticks.linewidth = 0.25,
+                                order = 1),
+         shape = guide_legend(order = 2)) +
+  
+  # Format map
+  
+  theme_bw() + 
+  
+  theme(axis.title = ggplot2::element_blank(),
+        axis.text = ggplot2::element_blank(),
+        axis.ticks = ggplot2::element_blank(),
+        
+        legend.position = "inside",
+        legend.margin = ggplot2::margin(0, 0, 0, 0),
+        legend.position.inside = c(0.15, 0.88),
+        
+        panel.grid = ggplot2::element_blank(),
+        
+        text = ggplot2::element_text(size = 12))
+
+## Output observed and BYM smoothed SIR for lip cancer risk --------------------
+
+(map_obs_sir | map_bym_residual_sir) +
+  patchwork::plot_annotation(title = "Observed and BYM smoothed SIR for male lip cancer in Scotland (1975-1980)", 
+                             theme = theme(plot.title = element_text(hjust = 0.5)))
+
+```
 
 ## References
 
